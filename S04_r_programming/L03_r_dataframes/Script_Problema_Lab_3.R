@@ -1,19 +1,69 @@
-# a. Importa las librerías necesarias (las puedes ir añadiendo conforme surja su necesidad).
-#     o Lee ambos ficheros como dos dataframes. Al ‘data_PremiumPizza.csv’ llámalo df_venta y al ‘calendario_festivos.csv’, df_calendario. También debes convertir los dataframes a tibble.
-# b. Visualiza el tipado (la clase) de las variables del dataframe. En caso de que las columnas de fecha no sean tipo Date, debes convertirlas a Date.
-# c. Une ambas tablas cruzando las columnas ‘FECHA_SEMANA’ (df_venta) y ‘FECHA_SEMANA_LUNES’ (df_calendario), dando prioridad al dataframe df_venta. Al dataframe resultante debes llamarlo df.
-# o Por medio de la función filter de Dplyr, elimina las filas de df que contienen NAs en la variable unidades. Ayúdate del carácter exclamación (!).
-# d. Construye un agregado por año que calcule:
-#     o Número de observaciones.
-#     o Suma de unidades vendidas.
-#     o Media de unidades vendidas.
-#     o Suma de GRPs.
-#     o Media de GRPs.
-# e. Construye un agregado por la variable ‘FESTIVOS’ que calcule la mediana de unidades.
-# f. Construye un agregado mensual que calcule:
-#     o Suma de tiendas abiertas.
-#     o Suma de GRPs.
-#     o Suma de unidades.
-#     o Suma de festivos.
-# g. Calcula la correlación entre la variable de ‘UNIDADES’ y ‘GRPs’.
-# h. Haciendo uso de la función select de Dplyr, quédate con las variables ‘FECHA_SEMANA’, ‘UNIDADES’ y ‘GRPs’. El dataframe resultante debes transformarlo a formato long por medio del paquete Tidyr.
+# a. Importar librerías necesarias
+library(readr)      # Para leer CSVs
+library(dplyr)      # Para manipulación de datos
+library(tibble)     # Para trabajar con tibbles
+library(lubridate)  # Para manejo de fechas
+library(tidyr)      # Para transformar a formato long
+
+# a. Leer los ficheros y convertirlos a tibble
+df_venta <- read_csv("data_PremiumPizza.csv") %>% as_tibble()
+df_calendario <- read_csv2("calendario_festivos.csv") %>% as_tibble()
+
+# b. Ver tipado de las variables
+str(df_venta)
+str(df_calendario)
+
+# Si las fechas no son tipo Date, las convertimos
+df_venta <- df_venta %>%
+  mutate(FECHA_SEMANA = as.Date(FECHA_SEMANA))
+
+df_calendario <- df_calendario %>%
+  mutate(FECHA_SEMANA_LUNES = as.Date(FECHA_SEMANA_LUNES))
+
+# c. Unir tablas (left join para dar prioridad a df_venta)
+df <- df_venta %>%
+  left_join(df_calendario, by = c("FECHA_SEMANA" = "FECHA_SEMANA_LUNES"))
+
+# Eliminar filas con NA en "unidades"
+df <- df %>%
+  filter(!is.na(UNIDADES))
+
+# d. Agregado por año
+df_anual <- df %>%
+  mutate(anio = year(FECHA_SEMANA)) %>%
+  group_by(anio) %>%
+  summarise(
+    n_obs = n(),
+    suma_unidades = sum(UNIDADES, na.rm = TRUE),
+    media_unidades = mean(UNIDADES, na.rm = TRUE),
+    suma_grps = sum(GRPs, na.rm = TRUE),
+    media_grps = mean(GRPs, na.rm = TRUE)
+  )
+
+# e. Agregado por FESTIVOS -> mediana de unidades
+df_festivos <- df %>%
+  group_by(FESTIVOS) %>%
+  summarise(mediana_unidades = median(UNIDADES, na.rm = TRUE))
+
+# f. Agregado mensual
+df_mensual <- df %>%
+  mutate(mes = floor_date(FECHA_SEMANA, "month")) %>%
+  group_by(mes) %>%
+  summarise(
+    suma_tiendas = sum(TIENDAS.ABIERTAS, na.rm = TRUE),
+    suma_grps = sum(GRPs, na.rm = TRUE),
+    suma_unidades = sum(UNIDADES, na.rm = TRUE),
+    suma_festivos = sum(FESTIVOS, na.rm = TRUE)
+  )
+
+# g. Correlación entre UNIDADES y GRPs
+correlacion <- cor(df$UNIDADES, df$GRPs, use = "complete.obs")
+
+# h. Selección de variables y transformación a formato long
+df_long <- df %>%
+  select(FECHA_SEMANA, UNIDADES, GRPs) %>%
+  pivot_longer(
+    cols = c(UNIDADES, GRPs),
+    names_to = "variable",
+    values_to = "valor"
+  )
