@@ -1,0 +1,7 @@
+id_venta,id_cliente,producto,cantidad,fecha
+1,101,Producto A,2,2024-01-10
+2,102,Producto B,1,2024-02-15
+3,103,Producto A,3,2024-01-12
+4,101,Producto C,4,2024-03-10
+5,102,Producto B,2,2024-02-20
+6,104,Producto A,5,2024-01-30
