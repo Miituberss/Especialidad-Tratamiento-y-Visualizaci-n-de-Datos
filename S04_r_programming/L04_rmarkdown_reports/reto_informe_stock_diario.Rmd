@@ -1,0 +1,79 @@
+---
+title: "Análisis de Stock Diario (2019-2022)"
+author: "Marcos"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# Librerías necesarias
+library(tidyverse)
+library(dplyr)
+library(readr)
+library(lubridate)
+
+# Configuración para no mostrar warnings ni mensajes
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+# Introducción
+
+Este informe analiza el stock diario de productos en dos sucursales (Norte y Sur) entre 2019 y 2022.
+El objetivo es:
+
+* Importar y limpiar los datos.
+* Calcular el valor total de stock.
+* Realizar un análisis anual y por sucursal para comparar inventarios.
+
+# Importación y Preparación de Datos
+
+```{r import}
+# Importar CSV
+stock <- read_csv("stock_diario.csv") %>%
+  arrange(FECHA) %>%
+  as_tibble()
+
+# Limpieza de valores faltantes con promedio
+stock <- stock %>%
+  mutate(
+    STOCK = ifelse(is.na(STOCK), mean(STOCK, na.rm = TRUE), STOCK),
+    PRECIO_UNITARIO = ifelse(is.na(PRECIO_UNITARIO), mean(PRECIO_UNITARIO, na.rm = TRUE), PRECIO_UNITARIO),
+    VALOR_TOTAL = STOCK * PRECIO_UNITARIO
+  )
+```
+
+# Vista Previa y Resumen de Datos
+
+```{r preview}
+head(stock)
+summary(stock)
+```
+
+# Análisis por Sucursal
+
+```{r sucursal}
+analisis_sucursal <- stock %>%
+  group_by(SUCURSAL) %>%
+  summarise(TOTAL_STOCK = sum(STOCK))
+
+analisis_sucursal
+```
+
+Podemos observar cuál sucursal tiene el mayor inventario acumulado en el periodo analizado.
+
+# Análisis Anual
+
+```{r anual}
+stock <- stock %>%
+  mutate(AÑO = year(ymd(FECHA)))
+
+analisis_anual <- stock %>%
+  group_by(SUCURSAL, AÑO) %>%
+  summarise(TOTAL_STOCK = sum(STOCK))
+
+analisis_anual
+```
+
+# Conclusión
+
+El informe permite identificar tendencias en el stock de las sucursales Norte y Sur entre 2019 y 2022, detectando cuál ha tenido mayor acumulación de inventario y cómo ha variado anualmente.
